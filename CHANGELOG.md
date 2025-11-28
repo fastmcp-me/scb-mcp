@@ -2,6 +2,31 @@
 
 Alla viktiga ändringar i projektet dokumenteras i denna fil.
 
+## [2.5.2] - 2025-11-28
+
+### Tillagt
+- **MCP 2025 Tool Annotations** - Alla 10 verktyg har nu:
+  - `title` - Användarvänlig rubrik
+  - `readOnlyHint: true` - Indikerar att alla verktyg är read-only (inga sidoeffekter)
+  - `openWorldHint` - Indikerar om verktyget gör externa API-anrop eller använder lokal data
+
+- **4 Interaktiva Prompts** enligt MCP-specifikationen:
+  - `get_started` - Introduktion till SCB MCP Server med arbetsflöde och tips
+  - `find_population_data` - Steg-för-steg guide för befolkningsstatistik (med dynamisk kommun-parameter)
+  - `compare_regions` - Guide för att jämföra regioner (med parameters för regioner och ämne)
+  - `search_statistics` - Guide för att söka statistik (med automatisk svensk översättning)
+
+### Förbättrat
+- **Capabilities declaration** - Server deklarerar nu korrekt stöd för:
+  - `tools` - Med annotations-metadata
+  - `resources` - 8 fördefinierade resurser (instruktioner, regioner, kategorier)
+  - `prompts` - 4 interaktiva guider
+
+### Tekniskt
+- Följer MCP 2025 specifikation för tool annotations
+- Prompts stödjer dynamiska argument (municipality, regions, topic)
+- GetPromptRequestSchema-handler implementerad
+
 ## [2.5.1] - 2025-11-28
 
 ### Tillagt

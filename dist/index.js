@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { CallToolRequestSchema, ListToolsRequestSchema, ListResourcesRequestSchema, ReadResourceRequestSchema, ListPromptsRequestSchema, } from '@modelcontextprotocol/sdk/types.js';
+import { CallToolRequestSchema, ListToolsRequestSchema, ListResourcesRequestSchema, ReadResourceRequestSchema, ListPromptsRequestSchema, GetPromptRequestSchema, } from '@modelcontextprotocol/sdk/types.js';
 import { fileURLToPath } from 'url';
 import { SCBApiClient } from './api-client.js';
 import { resources, getResourceContent } from './resources.js';
@@ -115,11 +115,59 @@ export class SCBMCPServer {
                 ],
             };
         });
-        // List available prompts (none for now)  
+        // List available prompts
         this.server.setRequestHandler(ListPromptsRequestSchema, async () => {
             return {
-                prompts: [],
+                prompts: [
+                    {
+                        name: 'get_started',
+                        description: 'Introduction to SCB MCP Server - read this first to understand how to use Swedish statistics',
+                    },
+                    {
+                        name: 'find_population_data',
+                        description: 'Step-by-step guide to find and retrieve population statistics for a Swedish municipality',
+                        arguments: [
+                            {
+                                name: 'municipality',
+                                description: 'Name of the municipality (e.g., "Stockholm", "Göteborg", "Malmö")',
+                                required: false,
+                            },
+                        ],
+                    },
+                    {
+                        name: 'compare_regions',
+                        description: 'Guide to comparing statistics between multiple Swedish regions',
+                        arguments: [
+                            {
+                                name: 'regions',
+                                description: 'Comma-separated list of regions to compare (e.g., "Stockholm, Göteborg")',
+                                required: false,
+                            },
+                            {
+                                name: 'topic',
+                                description: 'What to compare: population, employment, housing, etc.',
+                                required: false,
+                            },
+                        ],
+                    },
+                    {
+                        name: 'search_statistics',
+                        description: 'Guide to searching for specific statistics in the SCB database',
+                        arguments: [
+                            {
+                                name: 'topic',
+                                description: 'Topic to search for (e.g., "unemployment", "housing prices", "education")',
+                                required: false,
+                            },
+                        ],
+                    },
+                ],
             };
+        });
+        // Handle get prompt requests
+        this.server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+            const { name, arguments: args } = request.params;
+            return this.getPrompt(name, args || {});
         });
         // Handle tool calls
         this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
@@ -135,6 +183,11 @@ export class SCBMCPServer {
                 inputSchema: {
                     type: 'object',
                     properties: {},
+                },
+                annotations: {
+                    title: 'API Status',
+                    readOnlyHint: true,
+                    openWorldHint: true,
                 },
             },
             {
@@ -177,6 +230,11 @@ export class SCBMCPServer {
                         },
                     },
                 },
+                annotations: {
+                    title: 'Search Tables',
+                    readOnlyHint: true,
+                    openWorldHint: true,
+                },
             },
             {
                 name: 'scb_get_table_info',
@@ -195,6 +253,11 @@ export class SCBMCPServer {
                         },
                     },
                     required: ['tableId'],
+                },
+                annotations: {
+                    title: 'Get Table Info',
+                    readOnlyHint: true,
+                    openWorldHint: true,
                 },
             },
             {
@@ -223,6 +286,11 @@ export class SCBMCPServer {
                     },
                     required: ['tableId'],
                 },
+                annotations: {
+                    title: 'Get Table Data',
+                    readOnlyHint: true,
+                    openWorldHint: true,
+                },
             },
             {
                 name: 'scb_check_usage',
@@ -230,6 +298,11 @@ export class SCBMCPServer {
                 inputSchema: {
                     type: 'object',
                     properties: {},
+                },
+                annotations: {
+                    title: 'Check Usage',
+                    readOnlyHint: true,
+                    openWorldHint: false,
                 },
             },
             {
@@ -249,6 +322,11 @@ export class SCBMCPServer {
                         },
                     },
                     required: ['query'],
+                },
+                annotations: {
+                    title: 'Search Regions',
+                    readOnlyHint: true,
+                    openWorldHint: false,
                 },
             },
             {
@@ -273,6 +351,11 @@ export class SCBMCPServer {
                     },
                     required: ['tableId'],
                 },
+                annotations: {
+                    title: 'Get Table Variables',
+                    readOnlyHint: true,
+                    openWorldHint: true,
+                },
             },
             {
                 name: 'scb_find_region_code',
@@ -295,6 +378,11 @@ export class SCBMCPServer {
                         },
                     },
                     required: ['query'],
+                },
+                annotations: {
+                    title: 'Find Region Code',
+                    readOnlyHint: true,
+                    openWorldHint: false,
                 },
             },
             {
@@ -323,6 +411,11 @@ export class SCBMCPServer {
                     },
                     required: ['tableId'],
                 },
+                annotations: {
+                    title: 'Test Selection',
+                    readOnlyHint: true,
+                    openWorldHint: true,
+                },
             },
             {
                 name: 'scb_preview_data',
@@ -349,6 +442,11 @@ export class SCBMCPServer {
                         },
                     },
                     required: ['tableId'],
+                },
+                annotations: {
+                    title: 'Preview Data',
+                    readOnlyHint: true,
+                    openWorldHint: true,
                 },
             },
         ];
@@ -1431,6 +1529,214 @@ ${structuredData.data.slice(0, 5).map(record => {
                     },
                 ],
             };
+        }
+    }
+    getPrompt(name, args) {
+        switch (name) {
+            case 'get_started':
+                return {
+                    messages: [
+                        {
+                            role: 'user',
+                            content: {
+                                type: 'text',
+                                text: `# SCB MCP Server - Getting Started
+
+## What is this?
+This MCP server provides access to **Statistics Sweden (SCB)** - the official statistics agency of Sweden. You have access to 1,200+ statistical tables covering:
+
+- **Population** - Demographics, births, deaths, migration
+- **Labour Market** - Employment, unemployment, wages
+- **Economy** - GDP, income, prices, trade
+- **Housing** - Property prices, construction, rents
+- **Environment** - Emissions, energy, waste
+- **Education** - Schools, students, degrees
+
+## Key Principle: Use Swedish Search Terms!
+Swedish search terms give MUCH better results:
+- ✅ "befolkning" instead of "population"
+- ✅ "arbetslöshet" instead of "unemployment"
+- ✅ "inkomst" instead of "income"
+- ✅ "bostäder" instead of "housing"
+
+## Recommended Workflow
+1. **Search**: Use \`scb_search_tables\` with Swedish keywords
+2. **Find region code**: Use \`scb_find_region_code\` (e.g., "Göteborg" → "1480")
+3. **Check variables**: Use \`scb_get_table_variables\` to see available filters
+4. **Preview**: Use \`scb_preview_data\` to verify before fetching
+5. **Fetch**: Use \`scb_get_table_data\` for the full dataset
+
+## Region Code System
+- **00** = All of Sweden (Riket)
+- **2-digit** = Counties (län), e.g., "14" = Västra Götaland
+- **4-digit** = Municipalities (kommun), e.g., "1480" = Göteborg
+
+## Selection Syntax
+- Specific values: \`{"Region": ["1480", "1482"]}\`
+- All values: \`{"Region": ["*"]}\`
+- Latest N periods: \`{"Tid": ["TOP(5)"]}\`
+
+Ready to start? Try searching for a topic or ask me to find statistics for a specific region!`,
+                            },
+                        },
+                    ],
+                };
+            case 'find_population_data':
+                const municipality = args.municipality || '[municipality name]';
+                return {
+                    messages: [
+                        {
+                            role: 'user',
+                            content: {
+                                type: 'text',
+                                text: `# Finding Population Data for ${municipality}
+
+## Step-by-Step Guide
+
+### Step 1: Find the Region Code
+First, find the region code for "${municipality}":
+\`\`\`
+scb_find_region_code(query: "${municipality}")
+\`\`\`
+
+### Step 2: Search for Population Tables
+Search for population statistics:
+\`\`\`
+scb_search_tables(query: "folkmängd kommun", category: "population")
+\`\`\`
+
+Common population tables:
+- **TAB1267** - Population by region, age and sex
+- **TAB638** - Population by region, civil status, age and sex
+- **TAB4422** - Population by region, age and sex (historical)
+
+### Step 3: Check Available Variables
+\`\`\`
+scb_get_table_variables(tableId: "TAB1267")
+\`\`\`
+
+### Step 4: Preview the Data
+\`\`\`
+scb_preview_data(tableId: "TAB1267", selection: {
+  "Region": ["[region_code]"],
+  "Tid": ["TOP(5)"]
+})
+\`\`\`
+
+### Step 5: Fetch Full Data
+\`\`\`
+scb_get_table_data(tableId: "TAB1267", selection: {
+  "Region": ["[region_code]"],
+  "Alder": ["tot"],
+  "Kon": ["1", "2"],
+  "ContentsCode": ["BE0101A9"],
+  "Tid": ["TOP(10)"]
+})
+\`\`\`
+
+Shall I start by finding the region code for "${municipality}"?`,
+                            },
+                        },
+                    ],
+                };
+            case 'compare_regions':
+                const regions = args.regions || 'Stockholm, Göteborg';
+                const topic = args.topic || 'population';
+                return {
+                    messages: [
+                        {
+                            role: 'user',
+                            content: {
+                                type: 'text',
+                                text: `# Comparing Regions: ${regions}
+
+## Topic: ${topic}
+
+### Step 1: Find Region Codes
+For each region, find its code:
+\`\`\`
+scb_find_region_code(query: "[first region]")
+scb_find_region_code(query: "[second region]")
+\`\`\`
+
+### Step 2: Search for Relevant Tables
+Search for ${topic} statistics:
+\`\`\`
+scb_search_tables(query: "${topic === 'population' ? 'folkmängd' : topic}")
+\`\`\`
+
+### Step 3: Fetch Comparative Data
+\`\`\`
+scb_get_table_data(tableId: "[table_id]", selection: {
+  "Region": ["[code1]", "[code2]"],
+  "Tid": ["TOP(5)"]
+})
+\`\`\`
+
+### Tips for Comparison
+- Use the same time period for fair comparison
+- Consider per-capita values for population-sensitive metrics
+- Check if the table includes both regions (some tables are regional-only)
+
+Would you like me to start by finding the region codes for: ${regions}?`,
+                            },
+                        },
+                    ],
+                };
+            case 'search_statistics':
+                const searchTopic = args.topic || 'unemployment';
+                const swedishTerm = {
+                    'unemployment': 'arbetslöshet',
+                    'population': 'befolkning',
+                    'income': 'inkomst',
+                    'housing': 'bostäder',
+                    'education': 'utbildning',
+                    'environment': 'miljö',
+                    'health': 'hälsa',
+                }[searchTopic.toLowerCase()] || searchTopic;
+                return {
+                    messages: [
+                        {
+                            role: 'user',
+                            content: {
+                                type: 'text',
+                                text: `# Searching for: ${searchTopic}
+
+## Swedish Search Term
+For best results, use the Swedish term: **"${swedishTerm}"**
+
+### Step 1: Search Tables
+\`\`\`
+scb_search_tables(query: "${swedishTerm}")
+\`\`\`
+
+### Step 2: Narrow by Category
+Available categories:
+- \`population\` - Demographics, migration
+- \`labour\` - Employment, wages
+- \`economy\` - GDP, prices, trade
+- \`housing\` - Property, construction
+- \`environment\` - Climate, energy
+- \`education\` - Schools, students
+- \`health\` - Healthcare statistics
+
+### Step 3: Check Recently Updated Tables
+\`\`\`
+scb_search_tables(query: "${swedishTerm}", pastDays: 30)
+\`\`\`
+
+### Common Search Tips
+- Use Swedish for better results
+- Combine terms: "arbetslöshet kommun" (unemployment + municipality)
+- Use * for wildcards when uncertain
+
+Would you like me to search for "${swedishTerm}" now?`,
+                            },
+                        },
+                    ],
+                };
+            default:
+                throw new Error(`Unknown prompt: ${name}`);
         }
     }
     async run() {

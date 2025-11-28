@@ -22,6 +22,7 @@ export declare class SCBMCPServer {
     private handleFindRegionCode;
     private handleTestSelection;
     private handlePreviewData;
+    private getPrompt;
     run(): Promise<void>;
 }
 //# sourceMappingURL=index.d.ts.map
