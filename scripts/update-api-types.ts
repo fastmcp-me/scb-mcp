@@ -6,19 +6,18 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Sökväg till din lokala OpenAPI-specifikation
+// Sökvägar
 const OPENAPI_FILE = path.join(__dirname, '../docs/PxAPI-2.yml');
-// Output-fil
 const OUTPUT_FILE = path.join(__dirname, '../src/types/generated/scb-schema.ts');
 
 async function generateTypes() {
-  // Kontrollera att specifikationen finns
+  // 1. Kontrollera att källdokumentationen finns
   if (!fs.existsSync(OPENAPI_FILE)) {
-    console.error(`❌ Kunde inte hitta OpenAPI-filen: ${OPENAPI_FILE}`);
+    console.error(`❌ Kunde inte hitta OpenAPI-specifikationen: ${OPENAPI_FILE}`);
     process.exit(1);
   }
 
-  // Skapa mappen om den inte finns
+  // 2. Skapa output-mappen om den saknas
   const generatedDir = path.dirname(OUTPUT_FILE);
   if (!fs.existsSync(generatedDir)) {
     fs.mkdirSync(generatedDir, { recursive: true });
@@ -27,13 +26,13 @@ async function generateTypes() {
   console.log(`📦 Läser specifikation från: ${OPENAPI_FILE}`);
 
   try {
-    // Generera typer från den lokala filen med npx (kräver ingen installation)
+    // 3. Generera typer med npx (kräver ingen installation av dependencies)
     execSync(`npx openapi-typescript "${OPENAPI_FILE}" -o "${OUTPUT_FILE}"`, { 
       stdio: 'inherit',
       encoding: 'utf-8' 
     });
 
-    // Lägg till header
+    // 4. Lägg till en header så vi vet att filen är autogenererad
     if (fs.existsSync(OUTPUT_FILE)) {
       const content = fs.readFileSync(OUTPUT_FILE, 'utf-8');
       const header = `/**\n * AUTO-GENERATED FILE - DO NOT EDIT\n * Source: docs/PxAPI-2.yml\n * Generated at: ${new Date().toISOString()}\n */\n\n`;
